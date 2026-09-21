@@ -1,0 +1,24 @@
+# Swift Package Manager & Build Artifacts
+.build/
+build/
+DerivedData/
+
+# Xcode & SwiftPM User State
+.swiftpm/
+*.xcodeproj/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+*.xcworkspace/xcuserdata/
+*.xcuserstate
+
+# macOS System Files
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Logs & Temp Files
+*.log
+*.tmp
+
