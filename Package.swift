@@ -8,12 +8,12 @@ let package = Package(
         .macOS(.v14)
     ],
     products: [
-        .executable(name: "EyeAppMac", targets: ["EyeAppMac"])
+        .executable(name: "LookAway", targets: ["LookAway"])
     ],
     targets: [
         .executableTarget(
-            name: "EyeAppMac",
-            path: "Sources/EyeAppMac"
+            name: "LookAway",
+            path: "Sources/LookAway"
         )
     ]
 )

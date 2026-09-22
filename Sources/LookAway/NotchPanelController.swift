@@ -4,7 +4,7 @@ import SwiftUI
 
 @MainActor
 final class NotchGeometry: ObservableObject {
-    @Published var panelWidth: CGFloat = 460
+    @Published var panelWidth: CGFloat = 340
     @Published var notchGap: CGFloat = 0
 }
 
@@ -15,11 +15,11 @@ final class NotchPanelController {
     private var poller: Timer?
     private weak var model: EyeTimerModel?
 
-    private let panelHeight: CGFloat = 84
-    private let triggerWidth: CGFloat = 420
+    private let panelHeight: CGFloat = 78
+    private let triggerWidth: CGFloat = 340
     private let triggerHeight: CGFloat = 32
-    private let minimumWingWidth: CGFloat = 204
-    private let horizontalInset: CGFloat = 14
+    private let minimumWingWidth: CGFloat = 150
+    private let horizontalInset: CGFloat = 10
 
     init(model: EyeTimerModel) {
         self.model = model
@@ -97,7 +97,7 @@ final class NotchPanelController {
         let notchGap = measuredNotchGap(for: screen)
         let targetWidth = min(
             screen.frame.width - 24,
-            max(430, notchGap + minimumWingWidth * 2 + horizontalInset * 2)
+            max(340, notchGap + minimumWingWidth * 2 + horizontalInset * 2)
         )
 
         if abs(geometry.notchGap - notchGap) > 0.5 {

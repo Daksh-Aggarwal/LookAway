@@ -26,6 +26,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         reminderController = ReminderPanelController(model: model)
         observeStatusTitle(model: model)
         observeModeChanges(model: model)
+        observeSystemInterruptions(model: model)
     }
 
     private func configureStatusItem(model: EyeTimerModel) {
@@ -74,6 +75,42 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
                 self.previousMode = mode
             }
             .store(in: &cancellables)
+    }
+
+    private func observeSystemInterruptions(model: EyeTimerModel) {
+        let workspaceCenter = NSWorkspace.shared.notificationCenter
+        let notifications: [Notification.Name] = [
+            NSWorkspace.willSleepNotification,
+            NSWorkspace.screensDidSleepNotification,
+            NSWorkspace.sessionDidResignActiveNotification
+        ]
+
+        for notification in notifications {
+            workspaceCenter.publisher(for: notification)
+                .receive(on: RunLoop.main)
+                .sink { [weak model] _ in
+                    model?.pauseForSystemInterruption()
+                }
+                .store(in: &cancellables)
+        }
+
+        DistributedNotificationCenter.default().addObserver(
+            self,
+            selector: #selector(systemWillLock),
+            name: Notification.Name("com.apple.screenIsLocked"),
+            object: nil
+        )
+
+        DistributedNotificationCenter.default().addObserver(
+            self,
+            selector: #selector(systemWillLock),
+            name: Notification.Name("com.apple.screensaver.didstart"),
+            object: nil
+        )
+    }
+
+    @objc private func systemWillLock() {
+        model?.pauseForSystemInterruption()
     }
 
     @objc private func showMainWindow() {

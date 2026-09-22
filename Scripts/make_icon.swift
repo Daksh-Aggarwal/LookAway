@@ -4,6 +4,7 @@ import Foundation
 let root = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
 let resources = root.appendingPathComponent("Resources", isDirectory: true)
 let iconset = resources.appendingPathComponent("LookAway.iconset", isDirectory: true)
+let logo = resources.appendingPathComponent("logo.png")
 
 try? FileManager.default.removeItem(at: iconset)
 try FileManager.default.createDirectory(at: iconset, withIntermediateDirectories: true)
@@ -31,70 +32,53 @@ let specs = [
     IconSpec(points: 512, scale: 2)
 ]
 
-func drawIcon(size: Int) -> NSImage {
-    let image = NSImage(size: NSSize(width: size, height: size))
-    image.lockFocus()
+guard let sourceLogo = NSImage(contentsOf: logo) else {
+    fatalError("Could not load \(logo.path)")
+}
 
-    let rect = NSRect(x: 0, y: 0, width: size, height: size)
-    let corner = CGFloat(size) * 0.22
-    let background = NSBezierPath(roundedRect: rect.insetBy(dx: CGFloat(size) * 0.04, dy: CGFloat(size) * 0.04), xRadius: corner, yRadius: corner)
-    NSColor(red: 0.10, green: 0.13, blue: 0.13, alpha: 1).setFill()
-    background.fill()
+func resizedLogoPNG(size: Int) -> Data {
+    guard let bitmap = NSBitmapImageRep(
+        bitmapDataPlanes: nil,
+        pixelsWide: size,
+        pixelsHigh: size,
+        bitsPerSample: 8,
+        samplesPerPixel: 4,
+        hasAlpha: true,
+        isPlanar: false,
+        colorSpaceName: .deviceRGB,
+        bytesPerRow: 0,
+        bitsPerPixel: 0
+    ) else {
+        fatalError("Could not create bitmap for \(size)x\(size)")
+    }
 
-    let glow = NSBezierPath(ovalIn: rect.insetBy(dx: CGFloat(size) * 0.14, dy: CGFloat(size) * 0.16))
-    NSColor(red: 0.22, green: 0.78, blue: 0.69, alpha: 0.22).setFill()
-    glow.fill()
+    bitmap.size = NSSize(width: size, height: size)
 
-    let eyeRect = NSRect(
-        x: CGFloat(size) * 0.18,
-        y: CGFloat(size) * 0.35,
-        width: CGFloat(size) * 0.64,
-        height: CGFloat(size) * 0.30
+    NSGraphicsContext.saveGraphicsState()
+    guard let context = NSGraphicsContext(bitmapImageRep: bitmap) else {
+        fatalError("Could not create drawing context for \(size)x\(size)")
+    }
+
+    context.imageInterpolation = .high
+    NSGraphicsContext.current = context
+    NSColor.clear.setFill()
+    NSRect(x: 0, y: 0, width: size, height: size).fill()
+    sourceLogo.draw(
+        in: NSRect(x: 0, y: 0, width: size, height: size),
+        from: NSRect(origin: .zero, size: sourceLogo.size),
+        operation: .sourceOver,
+        fraction: 1
     )
-    let eye = NSBezierPath()
-    eye.move(to: NSPoint(x: eyeRect.minX, y: eyeRect.midY))
-    eye.curve(
-        to: NSPoint(x: eyeRect.maxX, y: eyeRect.midY),
-        controlPoint1: NSPoint(x: eyeRect.minX + eyeRect.width * 0.26, y: eyeRect.maxY),
-        controlPoint2: NSPoint(x: eyeRect.minX + eyeRect.width * 0.74, y: eyeRect.maxY)
-    )
-    eye.curve(
-        to: NSPoint(x: eyeRect.minX, y: eyeRect.midY),
-        controlPoint1: NSPoint(x: eyeRect.minX + eyeRect.width * 0.74, y: eyeRect.minY),
-        controlPoint2: NSPoint(x: eyeRect.minX + eyeRect.width * 0.26, y: eyeRect.minY)
-    )
-    eye.lineWidth = max(2, CGFloat(size) * 0.035)
-    NSColor.white.withAlphaComponent(0.92).setStroke()
-    eye.stroke()
+    NSGraphicsContext.restoreGraphicsState()
 
-    NSColor(red: 0.25, green: 0.77, blue: 0.68, alpha: 1).setFill()
-    NSBezierPath(ovalIn: NSRect(
-        x: CGFloat(size) * 0.43,
-        y: CGFloat(size) * 0.405,
-        width: CGFloat(size) * 0.14,
-        height: CGFloat(size) * 0.14
-    )).fill()
+    guard let png = bitmap.representation(using: .png, properties: [:]) else {
+        fatalError("Could not render \(size)x\(size) PNG")
+    }
 
-    let horizon = NSBezierPath()
-    horizon.move(to: NSPoint(x: CGFloat(size) * 0.25, y: CGFloat(size) * 0.27))
-    horizon.line(to: NSPoint(x: CGFloat(size) * 0.75, y: CGFloat(size) * 0.27))
-    horizon.lineWidth = max(2, CGFloat(size) * 0.025)
-    NSColor(red: 0.25, green: 0.77, blue: 0.68, alpha: 0.9).setStroke()
-    horizon.stroke()
-
-    image.unlockFocus()
-    return image
+    return png
 }
 
 for spec in specs {
-    let image = drawIcon(size: spec.pixels)
-    guard
-        let tiff = image.tiffRepresentation,
-        let bitmap = NSBitmapImageRep(data: tiff),
-        let png = bitmap.representation(using: .png, properties: [:])
-    else {
-        fatalError("Could not render \(spec.filename)")
-    }
-
+    let png = resizedLogoPNG(size: spec.pixels)
     try png.write(to: iconset.appendingPathComponent(spec.filename))
 }

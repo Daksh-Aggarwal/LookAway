@@ -6,9 +6,7 @@ import UserNotifications
 @MainActor
 final class EyeTimerModel: ObservableObject {
     @Published var presets = defaultPresets
-    @Published var selectedPresetID = "twenty" {
-        didSet { resetForSelectedPreset() }
-    }
+    @Published var selectedPresetID = "twenty"
     @Published var customName = "Custom Reset"
     @Published var customFocusMinutes = 18
     @Published var customBreakSeconds = 30
@@ -16,6 +14,7 @@ final class EyeTimerModel: ObservableObject {
     @Published var nativeNotifications = true
     @Published var visualReminders = true
     @Published var appearance: AppAppearance = .light
+    @Published private(set) var activePreset = defaultPresets[0]
     @Published var mode: TimerMode = .idle
     @Published var focusRemaining = defaultPresets[0].focusSeconds
     @Published var breakRemaining = defaultPresets[0].breakSeconds
@@ -25,6 +24,8 @@ final class EyeTimerModel: ObservableObject {
 
     private var ticker: Timer?
     private var soundWorkItems: [DispatchWorkItem] = []
+    private var cancellables = Set<AnyCancellable>()
+    private var pausedFromMode: TimerMode?
 
     var customPreset: EyePreset {
         EyePreset(
@@ -45,10 +46,6 @@ final class EyeTimerModel: ObservableObject {
         presets + [customPreset]
     }
 
-    var activePreset: EyePreset {
-        allPresets.first(where: { $0.id == selectedPresetID }) ?? presets[0]
-    }
-
     var displayRemaining: Int {
         mode == .resting ? breakRemaining : focusRemaining
     }
@@ -62,6 +59,12 @@ final class EyeTimerModel: ObservableObject {
     }
 
     init() {
+        loadSettings()
+        activePreset = preset(for: selectedPresetID)
+        focusRemaining = activePreset.focusSeconds
+        breakRemaining = activePreset.breakSeconds
+        observeSettings()
+
         if canUseUserNotifications {
             registerNotificationActions()
             requestNotifications()
@@ -74,15 +77,25 @@ final class EyeTimerModel: ObservableObject {
     }
 
     func start() {
-        if mode == .resting {
-            mode = .resting
-        } else {
+        switch mode {
+        case .paused:
+            mode = pausedFromMode ?? .running
+            pausedFromMode = nil
+        case .idle:
+            applySelectedPresetForNewSession()
             mode = .running
+        case .prompt:
+            mode = .running
+        case .running, .resting:
+            break
         }
         lastAction = "Timer started."
     }
 
     func pause() {
+        if mode == .running || mode == .resting {
+            pausedFromMode = mode
+        }
         mode = .paused
         lastAction = "Paused."
     }
@@ -96,14 +109,15 @@ final class EyeTimerModel: ObservableObject {
     }
 
     func reset() {
+        applySelectedPresetForNewSession()
         mode = .idle
-        focusRemaining = activePreset.focusSeconds
-        breakRemaining = activePreset.breakSeconds
+        pausedFromMode = nil
         lastAction = "Timer reset."
     }
 
     func acceptBreak() {
         cancelReminderSound()
+        pausedFromMode = nil
         breakRemaining = activePreset.breakSeconds
         playBreakStartSound()
         mode = .resting
@@ -112,6 +126,7 @@ final class EyeTimerModel: ObservableObject {
 
     func skipBreak() {
         cancelReminderSound()
+        pausedFromMode = nil
         focusRemaining = activePreset.focusSeconds
         mode = .running
         lastAction = "Skipped. Timer restarted."
@@ -119,6 +134,7 @@ final class EyeTimerModel: ObservableObject {
 
     func disableForNow() {
         cancelReminderSound()
+        pausedFromMode = nil
         mode = .idle
         focusRemaining = activePreset.focusSeconds
         breakRemaining = activePreset.breakSeconds
@@ -127,11 +143,27 @@ final class EyeTimerModel: ObservableObject {
 
     func selectPreset(_ preset: EyePreset) {
         selectedPresetID = preset.id
-        lastAction = "\(preset.name) selected."
+        if mode == .idle {
+            applySelectedPresetForNewSession()
+            lastAction = "\(preset.name) selected."
+        } else {
+            lastAction = "\(preset.name) is ready for the next session."
+        }
     }
 
     func useCustom() {
         selectedPresetID = "custom"
+        if mode == .idle {
+            applySelectedPresetForNewSession()
+        }
+    }
+
+    func pauseForSystemInterruption() {
+        cancelReminderSound()
+        guard mode == .running || mode == .resting else { return }
+        pausedFromMode = mode
+        mode = .paused
+        lastAction = "Paused while Mac was locked or sleeping."
     }
 
     func handleNotificationAction(_ identifier: String) {
@@ -173,6 +205,7 @@ final class EyeTimerModel: ObservableObject {
 
     private func fireReminder() {
         mode = .prompt
+        pausedFromMode = nil
         focusRemaining = activePreset.focusSeconds
         quoteIndex = (quoteIndex + 1) % reminderQuotes.count
         lastAction = "Reminder is waiting for you."
@@ -180,10 +213,67 @@ final class EyeTimerModel: ObservableObject {
         sendNotificationIfAllowed()
     }
 
-    private func resetForSelectedPreset() {
+    private func applySelectedPresetForNewSession() {
+        activePreset = preset(for: selectedPresetID)
         focusRemaining = activePreset.focusSeconds
         breakRemaining = activePreset.breakSeconds
-        mode = .idle
+    }
+
+    private func preset(for id: String) -> EyePreset {
+        allPresets.first(where: { $0.id == id }) ?? presets[0]
+    }
+
+    private func observeSettings() {
+        Publishers.MergeMany(
+            $selectedPresetID.map { _ in () }.eraseToAnyPublisher(),
+            $customName.map { _ in () }.eraseToAnyPublisher(),
+            $customFocusMinutes.map { _ in () }.eraseToAnyPublisher(),
+            $customBreakSeconds.map { _ in () }.eraseToAnyPublisher(),
+            $sound.map { _ in () }.eraseToAnyPublisher(),
+            $nativeNotifications.map { _ in () }.eraseToAnyPublisher(),
+            $visualReminders.map { _ in () }.eraseToAnyPublisher(),
+            $appearance.map { _ in () }.eraseToAnyPublisher()
+        )
+        .dropFirst(8)
+        .debounce(for: .milliseconds(250), scheduler: RunLoop.main)
+        .sink { [weak self] in
+            self?.saveSettings()
+        }
+        .store(in: &cancellables)
+    }
+
+    private func loadSettings() {
+        guard
+            let data = UserDefaults.standard.data(forKey: TimerSettings.storageKey),
+            let settings = try? JSONDecoder().decode(TimerSettings.self, from: data)
+        else {
+            return
+        }
+
+        selectedPresetID = settings.selectedPresetID
+        customName = settings.customName
+        customFocusMinutes = min(max(settings.customFocusMinutes, 1), 180)
+        customBreakSeconds = min(max(settings.customBreakSeconds, 5), 600)
+        sound = ReminderSound(rawValue: settings.sound) ?? .glass
+        nativeNotifications = settings.nativeNotifications
+        visualReminders = settings.visualReminders
+        appearance = AppAppearance(rawValue: settings.appearance) ?? .light
+    }
+
+    private func saveSettings() {
+        let settings = TimerSettings(
+            selectedPresetID: selectedPresetID,
+            customName: customName,
+            customFocusMinutes: min(max(customFocusMinutes, 1), 180),
+            customBreakSeconds: min(max(customBreakSeconds, 5), 600),
+            sound: sound.rawValue,
+            nativeNotifications: nativeNotifications,
+            visualReminders: visualReminders,
+            appearance: appearance.rawValue
+        )
+
+        guard let data = try? JSONEncoder().encode(settings) else { return }
+        UserDefaults.standard.set(data, forKey: TimerSettings.storageKey)
     }
 
     private func requestNotifications() {
@@ -308,6 +398,19 @@ final class EyeTimerModel: ObservableObject {
 
 enum ColorPalette {
     static let custom = SwiftUI.Color(red: 0.18, green: 0.64, blue: 0.56)
+}
+
+private struct TimerSettings: Codable {
+    static let storageKey = "LookAway.TimerSettings.v1"
+
+    let selectedPresetID: String
+    let customName: String
+    let customFocusMinutes: Int
+    let customBreakSeconds: Int
+    let sound: String
+    let nativeNotifications: Bool
+    let visualReminders: Bool
+    let appearance: String
 }
 
 func formattedTime(_ totalSeconds: Int) -> String {

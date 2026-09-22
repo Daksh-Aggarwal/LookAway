@@ -3,45 +3,43 @@ import SwiftUI
 struct NotchPanelView: View {
     @ObservedObject var model: EyeTimerModel
     @ObservedObject var geometry: NotchGeometry
-    private let height: CGFloat = 84
-    private let horizontalInset: CGFloat = 14
+    private let height: CGFloat = 78
+    private let horizontalInset: CGFloat = 10
 
     var body: some View {
-        Button {
-            NSApp.activate(ignoringOtherApps: true)
-        } label: {
-            ZStack(alignment: .bottom) {
-                UnevenRoundedRectangle(bottomLeadingRadius: 22, bottomTrailingRadius: 22)
-                    .fill(notchBackground)
-                    .overlay(
-                        UnevenRoundedRectangle(bottomLeadingRadius: 22, bottomTrailingRadius: 22)
-                            .stroke(notchMuted.opacity(0.12))
-                    )
-                    .shadow(color: .black.opacity(model.appearance == .dark ? 0.28 : 0.16), radius: 18, y: 10)
+        ZStack(alignment: .bottom) {
+            UnevenRoundedRectangle(bottomLeadingRadius: 20, bottomTrailingRadius: 20)
+                .fill(notchBackground)
+                .overlay(
+                    UnevenRoundedRectangle(bottomLeadingRadius: 20, bottomTrailingRadius: 20)
+                        .stroke(notchMuted.opacity(0.12))
+                )
+                .shadow(color: .black.opacity(model.appearance == .dark ? 0.28 : 0.16), radius: 16, y: 9)
 
-                HStack(spacing: 0) {
-                    leftInfo
-                        .frame(width: wingWidth, alignment: .leading)
+            HStack(spacing: 0) {
+                leftInfo
+                    .frame(width: wingWidth, alignment: .leading)
 
-                    Color.clear
-                        .frame(width: geometry.notchGap)
-                        .accessibilityHidden(true)
+                Color.clear
+                    .frame(width: geometry.notchGap)
+                    .accessibilityHidden(true)
 
-                    rightInfo
-                        .frame(width: wingWidth, alignment: .trailing)
-                }
-                .padding(.horizontal, 14)
-                .padding(.top, 10)
-                .padding(.bottom, 22)
-
-                sharedProgressBar
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 10)
+                rightInfo
+                    .frame(width: wingWidth, alignment: .trailing)
             }
-            .frame(width: geometry.panelWidth, height: height)
+            .padding(.horizontal, horizontalInset)
+            .padding(.top, 9)
+            .padding(.bottom, 20)
+
+            sharedProgressBar
+                .padding(.horizontal, 12)
+                .padding(.bottom, 9)
         }
-        .buttonStyle(.plain)
         .frame(width: geometry.panelWidth, height: height)
+        .contentShape(UnevenRoundedRectangle(bottomLeadingRadius: 20, bottomTrailingRadius: 20))
+        .onTapGesture {
+            NSApp.activate(ignoringOtherApps: true)
+        }
         .preferredColorScheme(model.appearance.colorScheme)
     }
 
@@ -50,46 +48,47 @@ struct NotchPanelView: View {
     }
 
     private var leftInfo: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 8) {
             ZStack {
                 Circle()
-                    .stroke(notchMuted.opacity(0.28), lineWidth: 3)
+                    .stroke(notchMuted.opacity(0.28), lineWidth: 2.5)
                 Circle()
                     .trim(from: 0, to: max(0.02, min(1, model.progress)))
-                    .stroke(model.activePreset.accent, style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                    .stroke(model.activePreset.accent, style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
                     .rotationEffect(.degrees(-90))
             }
-            .frame(width: 30, height: 30)
+            .frame(width: 26, height: 26)
 
-            VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 6) {
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 5) {
                     Circle()
                         .fill(statusColor)
-                        .frame(width: 6, height: 6)
+                        .frame(width: 5, height: 5)
                     Text(statusTitle)
-                        .font(.system(size: 10, weight: .heavy))
+                        .font(.system(size: 9, weight: .heavy))
                         .foregroundStyle(notchMuted)
                         .textCase(.uppercase)
                 }
 
                 Text(model.mode == .resting ? model.activePreset.distanceCue : model.activePreset.name)
-                    .font(.system(size: 13, weight: .bold))
+                    .font(.system(size: 12, weight: .bold))
                     .foregroundStyle(notchInk)
                     .lineLimit(1)
+                    .minimumScaleFactor(0.82)
             }
         }
     }
 
     private var rightInfo: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 8) {
             VStack(alignment: .trailing, spacing: 1) {
                 Text(formattedTime(model.displayRemaining))
-                    .font(.system(size: 21, weight: .bold, design: .rounded))
+                    .font(.system(size: 20, weight: .bold, design: .rounded))
                     .foregroundStyle(notchInk)
                     .monospacedDigit()
                     .lineLimit(1)
                 Text(model.mode == .prompt ? "choose an option" : nextCue)
-                    .font(.system(size: 10, weight: .bold))
+                    .font(.system(size: 9, weight: .bold))
                     .foregroundStyle(notchMuted)
                     .lineLimit(1)
             }
@@ -147,7 +146,7 @@ struct NotchPanelView: View {
             Image(systemName: actionIcon)
                 .font(.system(size: 11, weight: .heavy))
                 .foregroundStyle(notchInk)
-                .frame(width: 26, height: 24)
+                .frame(width: 24, height: 22)
         }
         .buttonStyle(.plain)
         .background(actionBackground, in: Capsule())

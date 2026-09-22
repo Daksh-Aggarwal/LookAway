@@ -98,7 +98,7 @@ private struct SidebarView: View {
 
             VStack(spacing: 8) {
                 ForEach(model.allPresets) { preset in
-                    PresetButton(preset: preset, isSelected: preset.id == model.activePreset.id, compact: layout == .compact)
+                    PresetButton(preset: preset, isSelected: preset.id == model.selectedPresetID, compact: layout == .compact)
                 }
             }
 
@@ -323,10 +323,10 @@ private struct HorizontalPresetStrip: View {
                         .padding(.horizontal, 12)
                         .frame(height: 34)
                         .background(
-                            preset.id == model.activePreset.id ? Design.card : Design.ink.opacity(0.05),
+                            preset.id == model.selectedPresetID ? Design.card : Design.ink.opacity(0.05),
                             in: Capsule()
                         )
-                        .overlay(Capsule().stroke(preset.id == model.activePreset.id ? preset.accent.opacity(0.42) : .clear))
+                        .overlay(Capsule().stroke(preset.id == model.selectedPresetID ? preset.accent.opacity(0.42) : .clear))
                     }
                     .buttonStyle(.plain)
                 }

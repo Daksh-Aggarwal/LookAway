@@ -16,7 +16,7 @@ iconutil -c icns "$ROOT_DIR/Resources/LookAway.iconset" -o "$ROOT_DIR/Resources/
 
 rm -rf "$APP_DIR"
 mkdir -p "$MACOS_DIR" "$RESOURCES_DIR"
-cp "$ROOT_DIR/.build/release/EyeAppMac" "$MACOS_DIR/EyeAppMac"
+cp "$ROOT_DIR/.build/release/LookAway" "$MACOS_DIR/LookAway"
 if [[ -f "$ROOT_DIR/Resources/LookAway.icns" ]]; then
   cp "$ROOT_DIR/Resources/LookAway.icns" "$RESOURCES_DIR/LookAway.icns"
 fi
@@ -29,7 +29,7 @@ cat > "$CONTENTS_DIR/Info.plist" <<'PLIST'
     <key>CFBundleDevelopmentRegion</key>
     <string>en</string>
     <key>CFBundleExecutable</key>
-    <string>EyeAppMac</string>
+    <string>LookAway</string>
     <key>CFBundleIdentifier</key>
     <string>com.daksh.lookaway</string>
     <key>CFBundleDisplayName</key>

@@ -6,7 +6,7 @@ LookAway is a minimal native macOS break timer built with Swift, SwiftUI, and Ap
 
 ```bash
 swift build
-swift run EyeAppMac
+swift run LookAway
 ```
 
 To create and launch a local macOS app bundle:
