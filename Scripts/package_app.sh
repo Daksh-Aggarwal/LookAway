@@ -54,4 +54,9 @@ cat > "$CONTENTS_DIR/Info.plist" <<'PLIST'
 </plist>
 PLIST
 
-echo "$APP_DIR"
+echo "Created bundle: $APP_DIR"
+
+ZIP_FILE="$ROOT_DIR/build/LookAway.zip"
+rm -f "$ZIP_FILE"
+ditto -c -k --sequesterRsrc --keepParent "$APP_DIR" "$ZIP_FILE"
+echo "Created release archive: $ZIP_FILE"
