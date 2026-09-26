@@ -79,17 +79,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
 
     private func observeSystemInterruptions(model: EyeTimerModel) {
         let workspaceCenter = NSWorkspace.shared.notificationCenter
-        let notifications: [Notification.Name] = [
+        let pauseNotifications: [Notification.Name] = [
             NSWorkspace.willSleepNotification,
             NSWorkspace.screensDidSleepNotification,
             NSWorkspace.sessionDidResignActiveNotification
         ]
 
-        for notification in notifications {
+        for notification in pauseNotifications {
             workspaceCenter.publisher(for: notification)
                 .receive(on: RunLoop.main)
                 .sink { [weak model] _ in
                     model?.pauseForSystemInterruption()
+                }
+                .store(in: &cancellables)
+        }
+
+        let resumeNotifications: [Notification.Name] = [
+            NSWorkspace.didWakeNotification,
+            NSWorkspace.screensDidWakeNotification,
+            NSWorkspace.sessionDidBecomeActiveNotification
+        ]
+
+        for notification in resumeNotifications {
+            workspaceCenter.publisher(for: notification)
+                .receive(on: RunLoop.main)
+                .sink { [weak model] _ in
+                    model?.resumeAfterSystemInterruption()
                 }
                 .store(in: &cancellables)
         }
@@ -107,10 +122,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
             name: Notification.Name("com.apple.screensaver.didstart"),
             object: nil
         )
+
+        DistributedNotificationCenter.default().addObserver(
+            self,
+            selector: #selector(systemDidUnlock),
+            name: Notification.Name("com.apple.screenIsUnlocked"),
+            object: nil
+        )
+
+        DistributedNotificationCenter.default().addObserver(
+            self,
+            selector: #selector(systemDidUnlock),
+            name: Notification.Name("com.apple.screensaver.didstop"),
+            object: nil
+        )
     }
 
     @objc private func systemWillLock() {
         model?.pauseForSystemInterruption()
+    }
+
+    @objc private func systemDidUnlock() {
+        model?.resumeAfterSystemInterruption()
     }
 
     @objc private func showMainWindow() {

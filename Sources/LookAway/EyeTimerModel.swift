@@ -26,6 +26,7 @@ final class EyeTimerModel: ObservableObject {
     private var soundWorkItems: [DispatchWorkItem] = []
     private var cancellables = Set<AnyCancellable>()
     private var pausedFromMode: TimerMode?
+    private var pausedBySystemInterruption = false
 
     var customPreset: EyePreset {
         EyePreset(
@@ -81,6 +82,7 @@ final class EyeTimerModel: ObservableObject {
         case .paused:
             mode = pausedFromMode ?? .running
             pausedFromMode = nil
+            pausedBySystemInterruption = false
         case .idle:
             applySelectedPresetForNewSession()
             mode = .running
@@ -96,6 +98,7 @@ final class EyeTimerModel: ObservableObject {
         if mode == .running || mode == .resting {
             pausedFromMode = mode
         }
+        pausedBySystemInterruption = false
         mode = .paused
         lastAction = "Paused."
     }
@@ -112,12 +115,14 @@ final class EyeTimerModel: ObservableObject {
         applySelectedPresetForNewSession()
         mode = .idle
         pausedFromMode = nil
+        pausedBySystemInterruption = false
         lastAction = "Timer reset."
     }
 
     func acceptBreak() {
         cancelReminderSound()
         pausedFromMode = nil
+        pausedBySystemInterruption = false
         breakRemaining = activePreset.breakSeconds
         playBreakStartSound()
         mode = .resting
@@ -127,6 +132,7 @@ final class EyeTimerModel: ObservableObject {
     func skipBreak() {
         cancelReminderSound()
         pausedFromMode = nil
+        pausedBySystemInterruption = false
         focusRemaining = activePreset.focusSeconds
         mode = .running
         lastAction = "Skipped. Timer restarted."
@@ -135,6 +141,7 @@ final class EyeTimerModel: ObservableObject {
     func disableForNow() {
         cancelReminderSound()
         pausedFromMode = nil
+        pausedBySystemInterruption = false
         mode = .idle
         focusRemaining = activePreset.focusSeconds
         breakRemaining = activePreset.breakSeconds
@@ -162,8 +169,17 @@ final class EyeTimerModel: ObservableObject {
         cancelReminderSound()
         guard mode == .running || mode == .resting else { return }
         pausedFromMode = mode
+        pausedBySystemInterruption = true
         mode = .paused
         lastAction = "Paused while Mac was locked or sleeping."
+    }
+
+    func resumeAfterSystemInterruption() {
+        guard mode == .paused, pausedBySystemInterruption else { return }
+        mode = pausedFromMode ?? .running
+        pausedFromMode = nil
+        pausedBySystemInterruption = false
+        lastAction = "Timer resumed after Mac became active."
     }
 
     func handleNotificationAction(_ identifier: String) {
@@ -206,6 +222,7 @@ final class EyeTimerModel: ObservableObject {
     private func fireReminder() {
         mode = .prompt
         pausedFromMode = nil
+        pausedBySystemInterruption = false
         focusRemaining = activePreset.focusSeconds
         quoteIndex = (quoteIndex + 1) % reminderQuotes.count
         lastAction = "Reminder is waiting for you."
