@@ -4,6 +4,29 @@ LookAway is a minimal native macOS break timer built with Swift, SwiftUI, and Ap
 
 ---
 
+## Screenshots
+
+<p align="center">
+  <img src="screenshots/timer-and-hud.png" alt="LookAway Active Timer and Dynamic Notch HUD" width="100%">
+</p>
+
+| Visual Break Reminder | Settings & Rhythm Customization |
+| :---: | :---: |
+| <img src="screenshots/break-reminder.png" alt="Visual Eye Break Reminder" width="100%"> | <img src="screenshots/settings.png" alt="LookAway Settings and Preferences" width="100%"> |
+| *Gentle overlay alert prompting you to take a 20-second break* | *Appearance, custom timer durations, chime styles, and notifications* |
+
+---
+
+## Features
+
+- **Presets**: Built-in timers for 20-20-20, blink resets, focus-distance shifts, and longer hourly decompression breaks.
+- **Customizable**: Set custom timer names, work durations, and break intervals.
+- **Visual Reminders**: Clean overlay alerts with accept, restart, and pause/disable-for-now actions.
+- **System Integration**: Native macOS menu-bar status item, native system notifications, and selectable reminder sounds.
+- **Notch-adjacent HUD**: Smooth dynamic HUD appearing from the top-center notch area mirroring the active timer.
+
+---
+
 ## Installation
 
 ### Option 1: Download Pre-built Release (Recommended)
@@ -47,16 +70,6 @@ To install it system-wide:
 ```bash
 cp -R "build/LookAway.app" /Applications/
 ```
-
----
-
-## Features
-
-- **Presets**: Built-in timers for 20-20-20, blink resets, focus-distance shifts, and longer hourly decompression breaks.
-- **Customizable**: Set custom timer names, work durations, and break intervals.
-- **Visual Reminders**: Clean overlay alerts with accept, restart, and pause/disable-for-now actions.
-- **System Integration**: Native macOS menu-bar status item, native system notifications, and selectable reminder sounds.
-- **Notch-adjacent HUD**: Smooth dynamic HUD appearing from the top-center notch area mirroring the active timer.
 
 ---
 
