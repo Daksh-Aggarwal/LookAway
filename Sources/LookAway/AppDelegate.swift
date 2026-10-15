@@ -10,6 +10,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
     private var reminderController: ReminderPanelController?
     private var cancellables = Set<AnyCancellable>()
     private weak var model: EyeTimerModel?
+    private var openMainWindow: (() -> Void)?
     private var previousMode: TimerMode = .idle
     private var appBeforeBreak: NSRunningApplication?
 
@@ -18,7 +19,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         UNUserNotificationCenter.current().delegate = self
     }
 
-    func configure(with model: EyeTimerModel) {
+    func configure(with model: EyeTimerModel, openMainWindow: @escaping () -> Void) {
+        self.openMainWindow = openMainWindow
         guard self.model == nil else { return }
         self.model = model
         configureStatusItem(model: model)
@@ -148,10 +150,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
 
     @objc private func showMainWindow() {
         NSApp.activate(ignoringOtherApps: true)
-        for window in NSApp.windows where window.title == "LookAway" {
+        if let window = NSApp.windows.first(where: { $0.title == "LookAway" }) {
             window.makeKeyAndOrderFront(nil)
-            return
+        } else {
+            openMainWindow?()
         }
+    }
+
+    func applicationShouldHandleReopen(
+        _ sender: NSApplication,
+        hasVisibleWindows flag: Bool
+    ) -> Bool {
+        guard !flag else { return true }
+        showMainWindow()
+        return true
     }
 
     @objc private func toggleTimer() {
